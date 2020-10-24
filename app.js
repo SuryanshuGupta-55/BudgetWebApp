@@ -1,23 +1,105 @@
 var budgetController = (function () {
 
+    //Creating a function Constructors for Expenses and Income.
 
+    var Expenses = function(id,des,val){
+        this.id = id,
+        this.des = des,
+        this.val = val
+    };
 
+    var Income = function(id,des,val){
+        this.id = id,
+        this.des = des,
+        this.val = val
+    };
 
+    var calculateTotal = function(type){
 
+        var sum = 0;
+        data.allItems[type].forEach(function (cur){
 
+            //The value is from Income and Expense function Constructor.
+            sum += cur.val;
+        });
 
-    // Here the variable a and function add have became priavet as we can only access them by calling budgetController.
-   /*  var x = 23;
+        //Total of either expense or income has been set.
+        data.total[type] = sum;
 
-    var add = function(a){
-        return x + a;
     }
+
+    //Creating a dataStructur for storing all required field.
+
+    var data = {
+        allItems: {
+            exp: [],
+            inc: []
+        },
+
+        total: {
+            exp: 0,
+            inc: 0
+        },
+        budget:0,
+        percentage: -1
+    };
+
     return {
-        publicTest : function(b) {
-            console.log(add(b));
+        // Creating public method to add data according to its type in our data structure.
+        addItem: function (type,description,value) {
+            var newItem,Id;
+
+            //Creating new Id.
+            if(data.allItems[type].length > 0){
+                
+                Id = data.allItems[type][data.allItems[type].length - 1].id + 1;
+            }else{
+                Id = 0;
+            }
+
+            //Create new item based on 'inc' or 'exp'.
+            if(type === 'exp'){
+                newItem = new Expenses(Id,description,value);
+            } else if(type === 'inc'){
+                newItem = new Income(Id,description,value);
+            }
+
+            //Adding data to our array.
+            //First we call the private constructor data and after that access its properties allItems.
+            //pushing new item into our data structure.
+            data.allItems[type].push(newItem);
+            
+            // return the new element.
+            return newItem;
+        },
+
+        calculateBudget: function(){
+            //Calculate total of expense and income.
+            calculateTotal('exp');
+            calculateTotal('inc');
+            
+            //Calculate the budget: income - expense.
+            data.budget = data.total.inc - data.total.exp;
+
+            //Calculate the percentage of the income that we spent
+
+            data.percentage = Math.round((data.total.exp / data.total.inc) * 100);
+
+        },
+
+        getBudget: function(){
+            return {
+                budget: data.budget,
+                totalIncome: data.total.inc,
+                totalExpense: data.total.exp,
+                percentage: data.percentage
+            };
+        },
+
+        testing : function(){
+            console.log(data);
         }
-    } */
-    /*Here budgetController will return an object of functions which we want to make public or expose to user such as publicTest  */
+    };
 
 })();
 
@@ -29,7 +111,13 @@ var UIController = ( function() {
         inputType: '.add__type',
         inputDes:  '.add__description',
         inputValue: '.add__value',
-        inputBtn: '.add__btn'
+        inputBtn: '.add__btn',
+        incomeContainer: '.income__list',
+        expensesContainer: '.expenses__list',
+        budgetTitle: '.budget__value',
+        expenseTitle: '.budget__expenses--value',
+        incomeTitle:  '.budget__income--value',
+        percentageTitle: '.budget__expenses--percentage'
     };
 
     return {
@@ -37,8 +125,61 @@ var UIController = ( function() {
             return {
                 type : document.querySelector(DOMStrings.inputType).value,
                 des  : document.querySelector(DOMStrings.inputDes).value,
-                value:  document.querySelector(DOMStrings.inputValue).value
+                value: parseFloat(document.querySelector(DOMStrings.inputValue).value)
             };
+        },
+
+        //Creating function for adding item into the Income and expense list of app by changing HTML using DOM.
+
+        addListItem: function (obj,type){
+            var html,newhtml,element;
+
+            if(type === 'exp'){
+                element = DOMStrings.expensesContainer;
+                html = '<div class="item clearfix" id="income-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
+            }
+            else if(type === 'inc'){
+                element = DOMStrings.incomeContainer;
+                html = '<div class="item clearfix" id=%id%><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
+            }
+
+            newhtml = html.replace("%id%",obj.id);
+            newhtml = newhtml.replace("%description%",obj.des);
+            newhtml = newhtml.replace("%value%",obj.val);
+
+            document.querySelector(element).insertAdjacentHTML('beforeend',newhtml);
+
+        },
+
+        clearField: function() {
+            var fields,fieldArray;
+
+            fields = document.querySelectorAll(DOMStrings.inputDes + ',' + DOMStrings.inputValue);
+
+            fieldArray = Array.prototype.slice.call(fields);
+
+            fieldArray.forEach(function(current,index,array){
+                current.value = "";
+            });
+
+            fieldArray[0].focus();
+
+        },
+
+        displayBudget: function(obj){
+
+            document.querySelector(DOMStrings.budgetTitle).textContent = obj.budget,
+            document.querySelector(DOMStrings.expenseTitle).textContent = obj.totalExpense,
+            document.querySelector(DOMStrings.incomeTitle).textContent = obj.totalIncome
+
+            if(obj.percentage > 0){
+                document.querySelector(DOMStrings.percentageTitle).textContent = obj.percentage+'%'
+            }
+            else{
+                document.querySelector(DOMStrings.percentageTitle).textContent = '---'
+            }
+
+
         },
         
         getDOmStrings: function(){
@@ -53,23 +194,106 @@ var UIController = ( function() {
 
 var controller = ( function(budgetCtrl, UICtrl) { 
 
-    var DOM = UICtrl.getDOmStrings();
+    // Creating a function for eventListners to make code organised.
+    var setupEventListners = function (){
+        var DOM = UICtrl.getDOmStrings();
+
+        document.querySelector(DOM.inputBtn).addEventListener('click',ctrlAddItem);
+
+        document.addEventListener('keypress',function(event) {
+            if(event.keyCode === 13 || event.which === 13){
+                ctrlAddItem();
+            }
+        });
+
+    };
+
+    var updateBudget = function() {
+
+        budgetCtrl.calculateBudget();
+
+        var budget = budgetCtrl.getBudget();
+
+        UICtrl.displayBudget(budget);
+
+    };
 
     var ctrlAddItem = function () {
+        var input,newItem;
         
-        console.log('pressed');
+        input = UICtrl.getInput();
+
+        if(input.des !== "" && !isNaN(input.value) && input.value > 0){
+
+            newItem = budgetCtrl.addItem(input.type,input.des,input.value);
+    
+            UICtrl.addListItem(newItem,input.type);
+    
+            UICtrl.clearField();
+
+            updateBudget();
+
+        }
+        
+        
     
     }
 
-    //Adding event handler for add button.
-
-    document.querySelector(DOM.inputBtn).addEventListener('click',ctrlAddItem);
-
-    document.addEventListener('keypress',function(event) {
-        if(event.keyCode === 13 || event.which === 13){
-            ctrlAddItem();
+    // Created init function which is a public function and will the first which will be called so that application can work.
+    return {
+        init: function(){
+            console.log("Application is running");
+            UICtrl.displayBudget({
+                budget: 0,
+                totalIncome: 0,
+                totalExpenses: 0,
+                percentage: -1
+            });
+            setupEventListners();
         }
-    });
-
+    }
 
 })(budgetController, UIController);
+
+controller.init();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ // Here the variable a and function add have became priavet as we can only access them by calling budgetController.
+   /*  var x = 23;
+
+    var add = function(a){
+        return x + a;
+    }
+    return {
+        publicTest : function(b) {
+            console.log(add(b));
+        }
+    } */
+    /*Here budgetController will return an object of functions which we want to make public or expose to user such as publicTest  */
