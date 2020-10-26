@@ -73,6 +73,25 @@ var budgetController = (function () {
             return newItem;
         },
 
+        deleteItem: function(type,id){
+
+            var ids,index;
+
+            //Here we cannot delete item like this data.allItems[ype][id] because we are not sure index and Id will be same.
+            //Here we are using map funtion to iterate over array as it returns a new array. 
+
+            ids = data.allItems[type].map(function(current) {
+                return current.id;
+            });
+
+            index = ids.indexOf(id);
+
+            if(index !== -1){
+                data.allItems[type].splice(index,1);
+            }
+            
+        },
+
         calculateBudget: function(){
             //Calculate total of expense and income.
             calculateTotal('exp');
@@ -117,7 +136,8 @@ var UIController = ( function() {
         budgetTitle: '.budget__value',
         expenseTitle: '.budget__expenses--value',
         incomeTitle:  '.budget__income--value',
-        percentageTitle: '.budget__expenses--percentage'
+        percentageTitle: '.budget__expenses--percentage',
+        container: '.container'
     };
 
     return {
@@ -136,11 +156,11 @@ var UIController = ( function() {
 
             if(type === 'exp'){
                 element = DOMStrings.expensesContainer;
-                html = '<div class="item clearfix" id="income-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
+                html = '<div class="item clearfix" id="exp-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__percentage">21%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
             }
             else if(type === 'inc'){
                 element = DOMStrings.incomeContainer;
-                html = '<div class="item clearfix" id=%id%><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
+                html = '<div class="item clearfix" id="inc-%id%"><div class="item__description">%description%</div><div class="right clearfix"><div class="item__value">%value%</div><div class="item__delete"><button class="item__delete--btn"><i class="ion-ios-close-outline"></i></button></div></div></div>'
             }
 
             newhtml = html.replace("%id%",obj.id);
@@ -149,6 +169,11 @@ var UIController = ( function() {
 
             document.querySelector(element).insertAdjacentHTML('beforeend',newhtml);
 
+        },
+
+        deleteListItem: function(selectorId){
+            var el = document.getElementById(selectorId);
+            el.parentNode.removeChild(el);
         },
 
         clearField: function() {
@@ -206,6 +231,9 @@ var controller = ( function(budgetCtrl, UICtrl) {
             }
         });
 
+        //Using event deligation for targeting remove button.
+        document.querySelector(DOM.container).addEventListener('click',ctrlDeleteItem);
+
     };
 
     var updateBudget = function() {
@@ -237,7 +265,29 @@ var controller = ( function(budgetCtrl, UICtrl) {
         
         
     
-    }
+    };
+
+    var ctrlDeleteItem = function(event) {
+        var itemId,splitId,type,Id;
+        itemId = event.target.parentNode.parentNode.parentNode.parentNode.id;
+        if(itemId){
+
+            splitId = itemId.split('-');
+            type = splitId[0];
+            Id = parseInt(splitId[1]);
+
+            //delete item from the data Structure
+            budgetCtrl.deleteItem(type,Id);
+           
+            //Delete the item from UI
+            UICtrl.deleteListItem(itemId);
+
+            //Update and show the new Budget.
+            updateBudget();
+        }
+
+
+    };
 
     // Created init function which is a public function and will the first which will be called so that application can work.
     return {
